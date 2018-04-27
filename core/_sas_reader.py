@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import string
-import locale
 import numpy as np
 import pandas as pd
 import ServerSideExtension_pb2 as SSE
