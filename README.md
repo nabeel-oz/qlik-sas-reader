@@ -1,5 +1,5 @@
 # Load SAS Datasets to Qlik
-This Python Server Side Extension (SSE) for Qlik helps read SAS datasets stored in SAS7BDAT or XPORT format files.
+This Python Server Side Extension (SSE) for Qlik helps load SAS datasets stored in SAS7BDAT or XPORT format files.
 
 The files are read using the [Pandas library](https://pandas.pydata.org/pandas-docs/stable/io.html?highlight=sas7bdatreader#sas-formats).
 
@@ -38,29 +38,30 @@ First you need to specify the path for the file and any additional arguments. We
 ```
 TempInputs:
 LOAD * INLINE [
-	'Path', 'Args'
-    '..\..\data\sample.sas7bdat', 'debug=true, chunksize=1000'
+     'Path', 'Args'
+     '..\..\data\sample.sas7bdat', 'debug=true, chunksize=1000'
 ];
 ```
 
-In the example above the SAS7BDAT file has been placed in a subfolder called 'data' in the root directory for the SSE. Absolute paths can also be used.
+In the example above the SAS7BDAT file has been placed in a subfolder called 'data' in the root directory of this SSE. Absolute paths can also be used.
 
-The data can then be loaded using the `LOAD...EXTENSION` syntax:
+The data can then be loaded using the `LOAD...EXTENSION` syntax using the Read_SAS function provided by this SSE:
 
 ```
 [SAS Dataset]:
-LOAD
-	*
+LOAD *
 EXTENSION SAS.Read_SAS(TempInputs{Path, Args});
 ```
+
+In the example above the analytic connection has been named as `SAS`. This is an arbitrary name and will depend on your settings during the installation.
 
 If you want a preview of the field names, you can use the `debug=true` option. This will enable the logging features of the SSE with information printed to the terminal and a log file. The log files can be found in the `qlik-sas-reader\qlik-sas-env\core\logs\` directory. 
 
 The optional parameters below can be included in the second string in the input table. 
 
-| Key word | Description | Sample Values | Remarks |
+| Keyword | Description | Sample Values | Remarks |
 | --- | --- | --- | --- |
-| debug | Flag to output additional information to the terminal and logs | `true`, `false` | Information will be printed to the terminal as well to a log file: `..\qlik-sas-env\core\logs\SAS Reader Log <n>.txt`. Particularly useful is looking at the sample output to see how the file is structured. |
+| debug | Flag to output additional information to the terminal and logs | `true`, `false` | Information will be printed to the terminal and a log file: `..\qlik-sas-env\core\logs\SAS Reader Log <n>.txt`. <br/><br/>Particularly useful is looking at the sample output to see how the file is structured. |
 | format | The format of the file | `xport`, `sas7bdat` | If the format is not specified, it will be inferred. |
 | encoding | Encoding for text data | `utf-8` | If the encoding is not specified, Pandas returns the text as raw bytes. This could be cleaned up in Qlik if desired. |
 | chunksize | Read file chunksize lines at a time | `10000` | This may be useful when reading large files. The file is read iteratively. |
