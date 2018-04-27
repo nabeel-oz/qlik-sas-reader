@@ -53,7 +53,7 @@ LOAD *
 EXTENSION SAS.Read_SAS(TempInputs{Path, Args});
 ```
 
-In the example above the analytic connection has been named as `SAS`. This is an arbitrary name and will depend on your settings during the installation.
+In the example above the analytic connection has been named as `SAS`. This is an arbitrary name and will depend on your configuration.
 
 If you want a preview of the field names, you can use the `debug=true` option. This will enable the logging features of the SSE with information printed to the terminal and a log file. The log files can be found in the `qlik-sas-reader\qlik-sas-env\core\logs\` directory. 
 
