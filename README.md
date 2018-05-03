@@ -66,4 +66,4 @@ The optional parameters below can be included in the second string in the input 
 | debug | Flag to output additional information to the terminal and logs | `true`, `false` | Information will be printed to the terminal and a log file: `..\qlik-sas-env\core\logs\SAS Reader Log <n>.txt`. <br/><br/>Particularly useful is looking at the sample output to see how the file is structured. |
 | format | The format of the file | `xport`, `sas7bdat` | If the format is not specified, it will be inferred. |
 | encoding | Encoding for text data | `utf-8` | If the encoding is not specified, Pandas returns the text as raw bytes. This could be cleaned up in Qlik if desired. |
-| chunksize | Read file chunksize lines at a time | `10000` | This is useful when reading large files. If specified, the file is read iteratively. |
+| chunksize | Read file chunksize lines at a time | `1000` | This is useful when reading large files. If specified, the file is read iteratively. |
