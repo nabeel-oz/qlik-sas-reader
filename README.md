@@ -20,13 +20,13 @@ For more information on Qlik Server Side Extensions see [qlik-oss](https://githu
 
 2. Download this git repository or get the [latest release](https://github.com/nabeel-qlik/qlik-sas-reader/releases/) and extract it to a location of your choice. The machine where you are placing this repository should have access to a local or remote Qlik Sense instance.
 
-3. Double click `Qlik-SAS-Init.bat` in the repository files and let it do it's thing. You can open this file in a text editor to review the commands that will be executed. If everything goes smoothly you will see a Python virtual environment being set up and some packages being installed. Once the execution completes, do a quick scan of the log to see everything installed correctly. The libraries imported are: `grpcio`, `numpy`, `pandas`.
+3. Double click `Qlik-SAS-Init.bat` in the repository files and let it do it's thing. You can open this file in a text editor to review the commands that will be executed. If everything goes smoothly you will see a Python virtual environment being set up and some packages being installed. Once the execution completes, do a quick scan of the log to see everything installed correctly. The libraries imported are: `grpcio`, `numpy`, `pandas`. Also, check that the `core` and `generated` directories have been moved successfully to the newly created `qlik-sas-env` directory.
 
-5. Now whenever you want to start this Python service you can run `Qlik-SAS-Start.bat`. If you get an error or no output in the terminal, check your firewall's inbound settings. You may need an inbound rule to open up port `50056`. If you need to change the port you can do so in the file `core\__main__.py` by opening the file with a text editor, changing the value of the `_DEFAULT_PORT` variable, and then saving the file.
+4. Now whenever you want to start this Python service you can run `Qlik-SAS-Start.bat`. If you get an error or no output in the terminal, check your firewall's inbound settings. You may need an inbound rule to open up port `50056`. If you need to change the port you can do so in the file `core\__main__.py` by opening the file with a text editor, changing the value of the `_DEFAULT_PORT` variable, and then saving the file.
 
-6. Now you need to [set up an Analytics Connection in Qlik Sense Enterprise](https://help.qlik.com/en-US/sense/February2018/Subsystems/ManagementConsole/Content/create-analytic-connection.htm) or [update the Settings.ini file in Qlik Sense Desktop](https://help.qlik.com/en-US/sense/February2018/Subsystems/Hub/Content/Introduction/configure-analytic-connection-desktop.htm).
+5. Now you need to [set up an Analytics Connection in Qlik Sense Enterprise](https://help.qlik.com/en-US/sense/February2018/Subsystems/ManagementConsole/Content/create-analytic-connection.htm) or [update the Settings.ini file in Qlik Sense Desktop](https://help.qlik.com/en-US/sense/February2018/Subsystems/Hub/Content/Introduction/configure-analytic-connection-desktop.htm).
 
-7. Finally restart the Qlik Sense engine service for Qlik Sense Enterprise or close and reopen Qlik Sense Desktop. This step may not be required if you are using Qlik Sense April 2018.
+6. Finally restart the Qlik Sense engine service for Qlik Sense Enterprise or close and reopen Qlik Sense Desktop. This step may not be required if you are using Qlik Sense April 2018.
 
 
 ## Usage
