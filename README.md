@@ -43,7 +43,7 @@ LOAD * INLINE [
 ];
 ```
 
-In the example above the SAS7BDAT file has been placed in a subfolder called 'data' in the root directory of this SSE. Absolute paths can also be used.
+In the example above the SAS7BDAT file has been placed in a subfolder called 'data' in the root directory of this SSE. You can also use absolute paths.
 
 The data can then be loaded using the `LOAD...EXTENSION` syntax using the Read_SAS function provided by this SSE:
 
