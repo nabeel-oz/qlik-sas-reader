@@ -55,13 +55,15 @@ EXTENSION SAS.Read_SAS(TempInputs{Path, Args});
 
 In the example above the analytic connection has been named as `SAS`. This is an arbitrary name and will depend on your configuration.
 
-If you want a preview of the field names, you can use the `debug=true` option. This will enable the logging features of the SSE with information printed to the terminal and a log file. The log files can be found in the `qlik-sas-reader\qlik-sas-env\core\logs\` directory. 
+If you want a preview of the field names, you can use the `debug=true` argument. This will enable the logging features of the SSE with information printed to the terminal and a log file. The log files can be found in the `qlik-sas-reader\qlik-sas-env\core\logs\` directory. 
 
-The optional parameters below can be included in the second string in the input table. 
+For large files you will need to specify the `chunksize` parameter. This allows the file to be read iteratively without hitting memory and row limits. 
+
+The optional parameters below can be included in the second string in the input table.  
 
 | Keyword | Description | Sample Values | Remarks |
 | --- | --- | --- | --- |
 | debug | Flag to output additional information to the terminal and logs | `true`, `false` | Information will be printed to the terminal and a log file: `..\qlik-sas-env\core\logs\SAS Reader Log <n>.txt`. <br/><br/>Particularly useful is looking at the sample output to see how the file is structured. |
 | format | The format of the file | `xport`, `sas7bdat` | If the format is not specified, it will be inferred. |
 | encoding | Encoding for text data | `utf-8` | If the encoding is not specified, Pandas returns the text as raw bytes. This could be cleaned up in Qlik if desired. |
-| chunksize | Read file chunksize lines at a time | `10000` | This may be useful when reading large files. If specified, the file is read iteratively. |
+| chunksize | Read file chunksize lines at a time | `10000` | This is useful when reading large files. If specified, the file is read iteratively. |
