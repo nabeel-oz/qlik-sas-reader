@@ -18,5 +18,8 @@ pip install grpcio-tools
 pip install numpy
 pip install pandas
 echo.
+echo Creating a new firewall rule for TCP port 50056... & echo.
+netsh advfirewall firewall add rule name="Qlik SAS Reader" dir=in action=allow protocol=TCP localport=50056
+echo.
 echo All done. Run Qlik-SAS-Start.bat to start the SSE Extension Service. & echo.
 pause

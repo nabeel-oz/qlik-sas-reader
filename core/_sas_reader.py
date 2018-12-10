@@ -77,7 +77,7 @@ class SASReader:
         # pandas.read_sas parameters:
         self.format = None
         self.encoding = None
-        self.chunksize = None
+        self.chunksize = 1000
         self.iterator = None
                 
         # Set optional parameters

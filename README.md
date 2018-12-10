@@ -18,20 +18,23 @@ For more information on Qlik Server Side Extensions see [qlik-oss](https://githu
 
 1. Get Python from [here](https://www.python.org/downloads/). Remember to select the option to add Python to your PATH environment variable.
 
-2. Download this git repository or get the [latest release](https://github.com/nabeel-qlik/qlik-sas-reader/releases/) and extract it to a location of your choice. The machine where you are placing this repository should have access to a local or remote Qlik Sense instance.
+2. Download the [latest release](https://github.com/nabeel-qlik/qlik-sas-reader/releases/) for this SSE and extract it to a location of your choice. The machine where you are placing this repository should have access to a local or remote Qlik Sense instance.
 
-3. Double click `Qlik-SAS-Init.bat` in the repository files and let it do it's thing. You can open this file in a text editor to review the commands that will be executed. If everything goes smoothly you will see a Python virtual environment being set up and some packages being installed. Once the execution completes, do a quick scan of the log to see everything installed correctly. The libraries imported are: `grpcio`, `grpcio-tools`, `numpy`, `pandas`. Also, check that the `core` and `generated` directories have been copied successfully to the newly created `qlik-sas-env` directory.
+3. Right click `Qlik-SAS-Init.bat` and choose 'Run as Administrator'. You can open this file in a text editor to review the commands that will be executed. If everything goes smoothly you will see a Python virtual environment being set up, project files being copied, some packages being installed and TCP Port 50056 being opened for inbound communication. 
+    - Note that the script always ends with a "All done" message and does not check for errors.
+    - If you need to change the port you can do so in the file `core\__main__.py` by opening the file with a text editor, changing the value of the `_DEFAULT_PORT` variable, and then saving the file. You will also need to update `Qlik-Py-Init.bat` to use the same port in the `netsh` command. This command will only work if you run the batch file through an elevated command prompt (i.e. with administrator privileges).
+    - Once the execution completes, do a quick scan of the log to see everything installed correctly. The libraries imported are: `grpcio`, `grpcio-tools`, `numpy`, `pandas`. Also, check that the `core` and `generated` directories have been copied successfully to the newly created `qlik-sas-env` directory.
 
-4. Now whenever you want to start this Python service you can run `Qlik-SAS-Start.bat`. If you get an error or no output in the terminal, check your firewall's inbound settings. You may need an inbound rule to open up port `50056`. If you need to change the port you can do so in the file `core\__main__.py` by opening the file with a text editor, changing the value of the `_DEFAULT_PORT` variable, and then saving the file.
+4. Now whenever you want to start this Python service you can run `Qlik-SAS-Start.bat`. You may need to run this batch file as an administrator.
 
 5. Now you need to [set up an Analytics Connection in Qlik Sense Enterprise](https://help.qlik.com/en-US/sense/February2018/Subsystems/ManagementConsole/Content/create-analytic-connection.htm) or [update the Settings.ini file in Qlik Sense Desktop](https://help.qlik.com/en-US/sense/February2018/Subsystems/Hub/Content/Introduction/configure-analytic-connection-desktop.htm).
 
-6. Finally restart the Qlik Sense engine service for Qlik Sense Enterprise or close and reopen Qlik Sense Desktop. This step may not be required if you are using Qlik Sense April 2018.
+6. Finally restart the Qlik Sense engine service for Qlik Sense Enterprise or close and reopen Qlik Sense Desktop. This step may not be required if you are using Qlik Sense April 2018 or above.
 
 
 ## Usage
 
-This SSE is meant to be used through the Qlik Sense Load Editor. 
+This SSE is meant to be used through the Qlik Sense Load Editor using the [LOAD...EXTENSION](https://help.qlik.com/en-US/sense/November2018/Subsystems/Hub/Content/Sense_Hub/Scripting/ScriptRegularStatements/Load.htm) syntax. 
 
 First you need to specify the path for the file and any additional arguments. We do this by creating a temporary input table in Qlik.
 
@@ -53,17 +56,17 @@ LOAD *
 EXTENSION SAS.Read_SAS(TempInputs{Path, Args});
 ```
 
-In the example above the analytic connection has been named as `SAS`. This is an arbitrary name and will depend on your configuration.
+In the example above the analytic connection has been named as `SAS`. This will depend on how you named the connection in step 5 of the installation.
 
 If you want a preview of the field names, you can use the `debug=true` argument. This will enable the logging features of the SSE with information printed to the terminal and a log file. The log files can be found in the `qlik-sas-reader\qlik-sas-env\core\logs\` directory. 
 
-For large files you will need to specify the `chunksize` parameter. This allows the file to be read iteratively without hitting memory and row limits. 
+For large files you should consider passing the `chunksize` parameter. This allows the file to be read iteratively `chunksize` lines at a time. This parameter defaults to `1000` for this SSE, but may need to be adjusted based on the number of columns in the file. 
 
-The optional parameters below can be included in the second string in the input table.  
+The optional parameters below can be included in the additional arguments passed to the function.  
 
 | Keyword | Description | Sample Values | Remarks |
 | --- | --- | --- | --- |
 | debug | Flag to output additional information to the terminal and logs | `true`, `false` | Information will be printed to the terminal and a log file: `..\qlik-sas-env\core\logs\SAS Reader Log <n>.txt`. <br/><br/>Particularly useful is looking at the sample output to see how the file is structured. |
 | format | The format of the file | `xport`, `sas7bdat` | If the format is not specified, it will be inferred. |
 | encoding | Encoding for text data | `utf-8` | If the encoding is not specified, Pandas returns the text as raw bytes. This could be cleaned up in Qlik if desired. |
-| chunksize | Read file chunksize lines at a time | `1000` | This is useful when reading large files. If specified, the file is read iteratively. |
+| chunksize | Read file chunksize lines at a time | `1000` | The file is read iteratively, `chunksize` lines at a time. This parameter defaults to `1000` but may need to be adjusted based on the number of columns in the file. |
