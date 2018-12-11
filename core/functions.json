@@ -9,6 +9,16 @@
         "a_path": 0,
         "b_other_args": 0
       }
+    },
+    {
+      "Id": 1,
+      "Name": "Get_Labels",
+      "Type": 0,
+      "ReturnType": 1,
+      "Params": {
+        "a_path": 0,
+        "b_other_args": 0
+      }
     }
   ]
 }

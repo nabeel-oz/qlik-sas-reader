@@ -22,6 +22,9 @@ from _sas_reader import SASReader
 # Set the default port for this SSE Extension
 _DEFAULT_PORT = '50056'
 
+# Set the maximum message length for gRPC in bytes
+_MAX_MESSAGE_LENGTH = 4 * 1024 * 1024
+
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 _MINFLOAT = float('-inf')
 
@@ -55,7 +58,8 @@ class ExtensionService(SSE.ConnectorServicer):
         :return: Mapping of function id and implementation
         """
         return {
-            0: '_read_sas'
+            0: '_read_sas',
+            1: '_read_sas'
         }
 
     """
@@ -73,6 +77,9 @@ class ExtensionService(SSE.ConnectorServicer):
         :Qlik expression examples:
         :<AAI Connection Name>.Read_SAS('data/airline.sas7bdat', 'format=sas7bdat')
         """
+        # Get the function id from the header to determine the variant being called
+        function = ExtensionService._get_function_id(context)
+        
         # Get a list from the generator object so that it can be iterated over multiple times
         request_list = [request_rows for request_rows in request]
             
@@ -80,8 +87,15 @@ class ExtensionService(SSE.ConnectorServicer):
         # This will take the SAS file information from Qlik and prepare the data to be read
         reader = SASReader(request_list, context)
         
-        # Read the SAS data file. This returns a Pandas Data Frame or an interator if the file is to be read in chunks
-        response = reader.read()
+        if function == 1:
+            # Get labels for the variables in the SAS file
+            response = reader.get_labels()
+        else:
+            # Read the SAS data file. This returns a Pandas Data Frame or an interator if the file is to be read in chunks
+            response = reader.read()
+
+        # The function will only send a maximum number of cells per bundle
+        _MAX_CELLS = 10000
         
         if isinstance(response, pd.DataFrame):
             # Convert the response to a list of rows
@@ -96,25 +110,36 @@ class ExtensionService(SSE.ConnectorServicer):
             # Values are then structured as SSE.Rows
             response_rows = [SSE.Row(duals=duals) for duals in response_rows]      
 
-            # Yield Row data as Bundled rows
-            yield SSE.BundledRows(rows=response_rows)
+            # Calculate number of rows per bundle, adjusting for overheads of data structures
+            rows_per_bundle = _MAX_CELLS//response.shape[1]
+
+            # Stream response as BundledRows
+            for i in range(0, len(response_rows), rows_per_bundle):
+                # Yield Row data as Bundled rows
+                yield SSE.BundledRows(rows=response_rows[i : i + rows_per_bundle])
         
         else:
-             for chunk in response:
+             for chunk in response:              
                 # Convert the chunk to a list of rows
                 response_list = chunk.values.tolist()
 
                 # We convert values to type SSE.Dual, and group columns into a iterable
                 response_rows = []
 
+                # Append rows to the response
                 for row in response_list:
                     response_rows.append(ExtensionService._get_duals(row))
 
                 # Values are then structured as SSE.Rows
                 response_rows = [SSE.Row(duals=duals) for duals in response_rows]      
 
-                # Yield Row data as Bundled rows
-                yield SSE.BundledRows(rows=response_rows)
+                # Calculate number of rows per bundle, adjusting for overheads of data structures
+                rows_per_bundle = _MAX_CELLS//chunk.shape[1]
+
+                # Stream response as BundledRows
+                for i in range(0, len(response_rows), rows_per_bundle):
+                    # Yield Row data as Bundled rows
+                    yield SSE.BundledRows(rows=response_rows[i : i + rows_per_bundle])
     
     @staticmethod
     def _get_duals(row):
@@ -129,7 +154,7 @@ class ExtensionService(SSE.ConnectorServicer):
             
             # if the value is null:
             if pd.isnull(col):
-                duals.append(SSE.Dual(numData=np.NaN, strData='/x00'))
+                duals.append(SSE.Dual(numData=np.NaN, strData=''))
                 
             # if the value is numeric:
             elif isinstance(col, (int, float)):
@@ -219,7 +244,10 @@ class ExtensionService(SSE.ConnectorServicer):
         :param pem_dir: Directory including certificates
         :return: None
         """
-        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10),\
+        options=[('grpc.max_message_length', _MAX_MESSAGE_LENGTH),('grpc.max_send_message_length', _MAX_MESSAGE_LENGTH),\
+        ('grpc.max_receive_message_length', _MAX_MESSAGE_LENGTH),('grpc.max_metadata_size', _MAX_MESSAGE_LENGTH)])
+
         SSE.add_ConnectorServicer_to_server(self, server)
 
         if pem_dir:
