@@ -24,6 +24,8 @@ For more information on Qlik Server Side Extensions see [qlik-oss](https://githu
 
 ## Installation
 
+For installing this SSE on a machine without Internet access, use the instructions [here](offline-install/README.md).
+
 1. Get Python from [here](https://www.python.org/downloads/). Remember to select the option to add Python to your PATH environment variable.
 
 2. Download the [latest release](https://github.com/nabeel-qlik/qlik-sas-reader/releases/) for this SSE and extract it to a location of your choice. The machine where you are placing this repository should have access to a local or remote Qlik Sense instance.
