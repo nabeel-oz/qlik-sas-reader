@@ -53,28 +53,62 @@ class SASReader:
         """
         Read the SAS dataset and return as a Pandas Data Frame or an iterator to read the file in chunks.
         """
-        reader = None
+        self.reader = None
+        retry = False
 
         # If encoding is not specified, we try some common codecs 
         if self.encoding is None:
             # Try encoding with each of the default codecs
             for cp in self.default_encoding:
                 try:
-                    reader = pd.read_sas(self.filepath, encoding=cp, **self.read_sas_kwargs)
+                    self.reader = pd.read_sas(self.filepath, encoding=cp, **self.read_sas_kwargs)
                     self.encoding = cp
                     break
                 except UnicodeDecodeError:
                     continue
+                except (OverflowError, ValueError) as e:
+                    # Pandas has some known limitations when reading SAS files 
+                    # https://github.com/pandas-dev/pandas/issues/20927
+                    # https://github.com/pandas-dev/pandas/issues/16615
+                    self._print_exception("Exception when reading the file with pandas. A second attempt will be made using the SAS7BDAT module", e)
+                    retry = True
+                    break
 
+            # If pandas failed to read the file we retry with the SAS7BDAT module
+            if retry:
+                for cp in self.default_encoding:
+                    try:
+                        handle = SAS7BDAT(self.filepath, skip_header=False, encoding=cp, encoding_errors="strict")
+                        self.reader = handle.to_data_frame()
+                        handle.close()
+                        self.encoding = cp
+                        break
+                    except UnicodeDecodeError:
+                        handle.close()
+                        continue
+                
         # Instantiate the reader if we haven't already done so
-        if reader is None:
-            reader = pd.read_sas(self.filepath, **self.read_sas_kwargs)
+        if self.reader is None:
+            try:
+                self.reader = pd.read_sas(self.filepath, **self.read_sas_kwargs)
+            except (OverflowError, ValueError) as e:
+                self._print_exception("Exception when reading the file with pandas. A second attempt will be made using the SAS7BDAT module", e)
+                
+                # Check if encoding has been specified
+                cp = self.encoding
+                if cp is None:
+                    cp = 'utf_8'                    
+
+                # If pandas failed to read the file we retry with the SAS7BDAT module
+                handle = SAS7BDAT(self.filepath, skip_header=False, encoding=cp, encoding_errors="ignore")
+                self.reader = handle.to_data_frame()
+                handle.close()
 
         # Send metadata on the result to Qlik
         self._send_table_description()
 
         # Read the SAS dataset
-        return reader
+        return self.reader
     
     def get_labels(self):
         """
@@ -82,7 +116,7 @@ class SASReader:
         """
 
         # Use the sas7bdat library to read the file
-        reader = SAS7BDAT(self.filepath, skip_header=False)
+        handle = SAS7BDAT(self.filepath, skip_header=False)
         
         columns = None
 
@@ -92,7 +126,7 @@ class SASReader:
             for cp in self.default_encoding:
                 try:
                     # Get labels for the variables
-                    columns = [(col.name.decode(cp), col.label.decode(cp)) for col in reader.columns]
+                    columns = [(col.name.decode(cp), col.label.decode(cp)) for col in handle.columns]
                     self.encoding = cp
                     break
                 except UnicodeDecodeError:
@@ -100,10 +134,10 @@ class SASReader:
 
         if columns is None:
             # Get labels for the variables
-           columns = [(col.name, col.label) for col in reader.columns]
+           columns = [(col.name, col.label) for col in handle.columns]
 
         self.columns = pd.DataFrame(columns)
-        reader.close()
+        handle.close()
 
         if self.debug:
             self._print_log(3)
@@ -205,20 +239,29 @@ class SASReader:
         if func is None:
             self.table.name = "SAS_Dataset"
 
-            # Read the SAS file to get sample data
-            sample_response = pd.read_sas(self.filepath, format=self.format, encoding=self.encoding, chunksize=5)
+            if isinstance(self.reader, pd.DataFrame):
+                self.sample_data = self.reader.head(5)
+            else:
+                # Read the SAS file to get sample data
+                sample_response = pd.read_sas(self.filepath, format=self.format, encoding=self.encoding, chunksize=5)
             
-            # Get the first chunk of data as a Pandas DataFrame
-            self.sample_data = sample_response.__next__()
+                # Get the first chunk of data as a Pandas DataFrame
+                self.sample_data = sample_response.__next__()
+
+                # Close the file reader
+                sample_response.close()
             
             # Fetch field labels from SAS variable attributes if required
             # This may fail for wide tables due to meta data limits. For such cases use the get_labels function.
             if self.labels:
                 # Use the sas7bdat library to read the file
-                reader = SAS7BDAT(self.filepath, skip_header=False)
+                handle = SAS7BDAT(self.filepath, skip_header=False)
 
                 # Get labels for the variables
-                labels = [col.label.decode(self.encoding) for col in reader.columns]
+                labels = [col.label.decode(self.encoding) for col in handle.columns]
+
+                # Close the file reader
+                handle.close()
             else:
                 # Get the variable names from the sample data
                 labels = self.sample_data.columns
@@ -301,5 +344,19 @@ class SASReader:
             with open(self.logfile,'a') as f:      
                 # Write the table description to the log file
                 f.write("\nTABLE DESCRIPTION SENT TO QLIK:\n\n{0} \n\n".format(self.table))
+
+    def _print_exception(self, s, e):
+        """
+        Output exception message to stdout and also to the log file if debugging is required.
+        :s: A description for the error
+        :e: The exception
+        """
+        
+        # Output exception message
+        sys.stdout.write("\n{0}: {1} \n\n".format(s, e))
+        
+        if self.debug:
+            with open(self.logfile,'a') as f:
+                f.write("\n{0}: {1} \n\n".format(s, e))
             
     

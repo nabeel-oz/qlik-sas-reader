@@ -140,6 +140,9 @@ class ExtensionService(SSE.ConnectorServicer):
                 for i in range(0, len(response_rows), rows_per_bundle):
                     # Yield Row data as Bundled rows
                     yield SSE.BundledRows(rows=response_rows[i : i + rows_per_bundle])
+            
+             # Close the file reader
+             response.close()
     
     @staticmethod
     def _get_duals(row):

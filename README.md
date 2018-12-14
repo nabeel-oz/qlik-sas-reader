@@ -1,4 +1,14 @@
 # Load SAS Datasets into Qlik
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Pre-requisites](#pre-requisites)
+- [Installation](#installation)
+- [SAS to Qlik Converter App](#sas-to-qlik-converter-app)
+- [Usage through the Qilk Load Script](#usage-through-the-qlik-load-script)
+
+## Introduction
 This Python Server Side Extension (SSE) for Qlik helps load SAS datasets stored in SAS7BDAT or XPORT files.
 
 The files are read using the [Pandas library](https://pandas.pydata.org/pandas-docs/stable/io.html?highlight=sas7bdatreader#sas-formats) and the [sas7bdat module](https://bitbucket.org/jaredhobbs/sas7bdat/overview).
@@ -7,12 +17,10 @@ For more information on Qlik Server Side Extensions see [qlik-oss](https://githu
 
 **Disclaimer:** This project has been started by me in a personal capacity and is not supported by Qlik. 
 
-
 ## Pre-requisites
 
 - Qlik Sense Enterprise or Qlik Sense Desktop
-- Python 3.4 or above
-
+- Python 3.6.7
 
 ## Installation
 
@@ -31,10 +39,43 @@ For more information on Qlik Server Side Extensions see [qlik-oss](https://githu
 
 6. Finally restart the Qlik Sense engine service for Qlik Sense Enterprise or close and reopen Qlik Sense Desktop. This step may not be required if you are using Qlik Sense April 2018 or above.
 
+7. Download the [SAS to Qlik Converter app](docs/SAS-to-Qlik-Converter.qvf) and import it in Qlik Sense.
 
-## Usage
+## SAS to Qlik Converter App
 
-This SSE is meant to be used through the Qlik Sense Load Editor using the [LOAD...EXTENSION](https://help.qlik.com/en-US/sense/November2018/Subsystems/Hub/Content/Sense_Hub/Scripting/ScriptRegularStatements/Load.htm) syntax. 
+Once this SSE is running you can use the [SAS to Qlik Converter app](docs/SAS-to-Qlik-Converter.qvf) to convert SAS7BDAT files to QVD or CSV formats. You can convert multiple files at a time, and with Qlik Sense Enterprise, schedule a reload task to run the conversion as a background job.
+
+Open the Data Manager in the app and edit the *SAS Converter* table.
+
+![Data Manger](docs/converter-app-01.png)
+
+Now click on *Select data from source*. 
+
+![Select data from source](docs/converter-app-02.png)
+
+This is a manual entry table and can be modified within the app. You can also copy and paste text using `Ctrl+C` and `Ctrl+V` in Windows.
+
+![Update fields](docs/converter-app-03.png)
+
+You need to provide information on the files to be converted using this table. The fields in **Bold** are mandatory.
+
+| Field | Description | Sample Values | Remarks |
+| --- | --- | --- | --- |
+| **File Name** | The file name including the extension | `abc.sas7bdat` | The converter app is only meant for use with SAS7BDAT files. |
+| **Absolute Path** | Absolute path to the file | `C:/SAS` | This path is with reference to the Server-Side Extension and cannot be a Qlik Data Connection. Shared drives will work as long as the user running the SSE has access to the directory. |
+| Labels instead of names | Use labels rather than the variable names in SAS | `true`, `false` | This option will fetch the label attribute for the variables in the SAS file and rename the fields in Qlik accordingly. |
+| String encoding | Codec to be used for decoding text data | `utf_8` | If this field is left blank, the SSE will attempt to decode with `utf_8`, `ascii` and `latin_1`, but in case of issues will return the text as bytes.<br><br>If the encoding is unknown and default decoding fails, the data can be cleaned up in Qlik using [String functions](https://help.qlik.com/en-US/sense/November2018/Subsystems/Hub/Content/Sense_Hub/Scripting/StringFunctions/string-functions.htm).<br><br>Valid values for this field are any of the [standard encodings in Python](https://docs.python.org/3/library/codecs.html#standard-encodings) |
+| Rows to read per iteration | Chunk size for reading rows from the file | `1000` | The file is read iteratively, `chunksize` lines at a time. This parameter defaults to `1000` but may be adjusted based on the number of rows and columns in the file. |
+| **Output Data Connection** | Existing Folder Data Connection in Qlik for storing the converted file | `Data`, `Data/SAS/Converted` | Valid values are an existing folder data connection in Qlik, or a subdirectory within an existing folder data connection. Do not include the `lib://` string. |
+| Output Format | The format for the converted file | `qvd`, `csv`, `txt` | If this field is left blank, the file will be saved in the `qvd` format. |
+
+Once the *SAS Converter* table is updated you can convert the files by clicking Load. You will need to do this through the Load Script Editor to be able to see any error messages.
+
+![Run load](docs/converter-app-04.png)
+
+## Usage through the Qilk Load Script
+
+This SSE can be used through the Qlik Sense Load Editor using the [LOAD...EXTENSION](https://help.qlik.com/en-US/sense/November2018/Subsystems/Hub/Content/Sense_Hub/Scripting/ScriptRegularStatements/Load.htm) syntax. 
 
 First you need to specify the path for the file and any additional arguments. We do this by creating a temporary input table in Qlik.
 
@@ -69,7 +110,7 @@ The optional parameters below can be included in the additional arguments passed
 | debug | Flag to output additional information to the terminal and logs | `true`, `false` | Information will be printed to the terminal and a log file: `..\qlik-sas-env\core\logs\SAS Reader Log <n>.txt`. <br/><br/>Particularly useful is looking at the sample output to see how the file is structured. |
 | labels | Flag to return labels instead of variable names from the SAS file | `true`, `false` | This parameter defaults to `false`. <br/><br/>For very wide tables, the labels may exceed metadata limits. In this case you can use the `Get_Labels` function described below. |
 | format | The format of the file | `xport`, `sas7bdat` | If the format is not specified, it will be inferred. |
-| encoding | Encoding for text data | `utf_8` | If the encoding is not specified, Pandas returns the text as raw bytes. This SSE will attempt to decode with `utf_8`, `ascii` and `latin_1`, but in case of issues will return the text as bytes.<br><br>If the encoding is unknown and default decoding fails, the data can be cleaned up in Qlik using [String functions](https://help.qlik.com/en-US/sense/November2018/Subsystems/Hub/Content/Sense_Hub/Scripting/StringFunctions/string-functions.htm). |
+| encoding | Codec to be used for decoding text data | `utf_8` | Valid values are any of the [standard encodings in Python](https://docs.python.org/3/library/codecs.html#standard-encodings).<br><br>If the encoding is not specified, Pandas returns the text as raw bytes. This SSE will attempt to decode with `utf_8`, `ascii` and `latin_1`, but in case of issues will return the text as bytes.<br><br>If the encoding is unknown and default decoding fails, the data can be cleaned up in Qlik using [String functions](https://help.qlik.com/en-US/sense/November2018/Subsystems/Hub/Content/Sense_Hub/Scripting/StringFunctions/string-functions.htm). |
 | chunksize | Read file chunksize lines at a time | `1000` | The file is read iteratively, `chunksize` lines at a time. This parameter defaults to `1000` but may need to be adjusted based on the number of columns in the file. |
 
 To get labels for the variables in a SAS7BDAT file you can call the `Get_Labels` function. If you load the result from this function as a mapping table in Qlik, you can easily rename the field names using the [Rename Fields](https://help.qlik.com/en-US/sense/November2018/Subsystems/Hub/Content/Sense_Hub/Scripting/ScriptRegularStatements/rename-field.htm) script function.
